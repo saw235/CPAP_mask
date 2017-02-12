@@ -102,9 +102,11 @@ struct {
   
   int scaled[16];
 
+  int channel_calibration_val[16];
+
 } IQS316;
  
-boolean scale = true;
+boolean scale = false;
 boolean LTA = false;
 boolean printRange = false;
 //////////////////////////////////////
@@ -325,6 +327,8 @@ void printTouchStat(void)
 void serialEvent(){
 
   switch(Serial.read()){
+
+    //Putty Handler
     case 's':
       scale = !scale;
       break;
@@ -334,10 +338,17 @@ void serialEvent(){
     case '1':
       if (scale) { printRange = !printRange; }
       break;
+      
+
+    //GUI handler  
     case(0x28) : 
       //sendTransmitReadyByte();
       sendSample2GUI();
       break;  
+    case(0x27) :
+      //scale_to_same();
+      scale = !scale;
+      break;
     }
 }
 
@@ -350,9 +361,15 @@ void sendSample2GUI(){
 
   //make a buffer to store 2 byte for each int
   for (unsigned char i = 0; i < 16; i++){
-    int num2convert = IQS316.sample_differences[i];
-    byte buf[2];
+    int num2convert;
 
+    if (!scale){
+      num2convert = IQS316.sample_differences[i];
+    } else { num2convert = IQS316.scaled[i]}
+
+
+
+    byte buf[2];
     //parse into high and low byte
     buf[0] = ((num2convert & 0xFF00) >> 8); //HI_BYTE
     buf[1] = num2convert & 0x00FF; // LO_BYTE
@@ -361,7 +378,16 @@ void sendSample2GUI(){
   }
 }
 
+//Calibrate
+//Description : Calibrate for to detect if mask is properly attached
+//              Should be called when attached neatly to face
+void Calibrate(void){
 
+  for (unsigned char i = 0; i < 16; i++) {
+    IQS316.channel_calibration_val[i] = IQS316.sample_differences[i];
+  }
+  
+}
 
 
 /***********************************************************************/
