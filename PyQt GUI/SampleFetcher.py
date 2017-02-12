@@ -43,9 +43,9 @@ class SampleFetcher(QObject):
         self.requestData()
 
         #wait for incoming data in serialport
-        print("waitingforReadyRead")
+        #print("waitingforReadyRead")
         ret = self.port.waitForReadyRead(3000)
-        print("ReadyRead")
+        #print("ReadyRead")
         #if timed out. ie: function return false
         if (not ret) : 
             return
@@ -70,10 +70,9 @@ class SampleFetcher(QObject):
         self.doneSampling.emit()
 
 
-    #Continuously polls for sensor data
+    #Polls for sensor data
     def process(self):
-        while True:
-            self.beginSampleRoutine()
+        self.beginSampleRoutine()
 
     @staticmethod
     def reconstructSample(arr):
@@ -100,7 +99,7 @@ class SampleFetcher(QObject):
 if __name__ == '__main__':
 
     qsPort = QSerialPort()
-    qsPort.setPortName('COM5')
+    qsPort.setPortName('COM4')
     qsPort.setBaudRate(QSerialPort.Baud115200)
     connect = False
 
