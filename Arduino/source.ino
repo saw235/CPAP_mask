@@ -3,7 +3,7 @@
 
 #define PUTTY_DISABLE //disable putty handler
 
-#define IRDY                2	//i2c ready pin - indicates to master, in this case the arduino, that the iqs is ready for data transmittion. 
+#define IRDY                2 //i2c ready pin - indicates to master, in this case the arduino, that the iqs is ready for data transmittion. 
 #define I2CA0               4
 #define MCLR                7
 
@@ -77,7 +77,7 @@
 #define DIRECT_ADDR_RW 0xFC
 #define DIRECT_DATA_RW 0xFD
 
-#define IQS316_ADDRESS 		0x74
+#define IQS316_ADDRESS    0x74
 #define PROX_MODE_ATI 0
 #define TOUCH_MODE_ATI 1
 
@@ -325,47 +325,46 @@ void printTouchStat(void)
 
 //SerialEvent Handler
 void serialEvent(){
+  byte a;
+  while (Serial.available()){
+    a = Serial.read();
 
-  switch(Serial.read()){
-
-    //Putty Handler
-    case 's':
-      scale = !scale;
-      break;
-    case 't': 
-      if (!scale) { LTA = !LTA;}
-      break;
-    case '1':
-      if (scale) { printRange = !printRange; }
-      break;
-      
-
-    //GUI handler  
-    case(0x28) : 
-      //sendTransmitReadyByte();
+    //Gui Handler
+    if (a == 0x28) {
       sendSample2GUI();
-      break;  
-    case(0x27) :
-      //scale_to_same();
+    } else if ( a == 0x27) {
       scale = !scale;
-      break;
+    } else if ( a == 0x26){
+      Calibrate2Face();
+    } 
+
+    #ifndef PUTTY_DISABLE
+      //Putty handler
+      else if ( a == 's'){
+      scale = !scale;
+    } else if ( a == 't'){
+      if (!scale) { LTA = !LTA;}
+    } else if ( a == '1'){
+      if (scale) { printRange = !printRange; }
     }
+    #endif
+
+  }
+
+
 }
 
 //sendSample2GUI
 //Description : Send samples in highbyte and low byte
 void sendSample2GUI(){
-
-  //clears buffer
-  Serial.flush();
-
+ 
   //make a buffer to store 2 byte for each int
   for (unsigned char i = 0; i < 16; i++){
     int num2convert;
 
     if (!scale){
       num2convert = IQS316.sample_differences[i];
-    } else { num2convert = IQS316.scaled[i]}
+    } else { num2convert = IQS316.scaled[i];}
 
 
 
@@ -376,17 +375,19 @@ void sendSample2GUI(){
 
     Serial.write(buf, 2);
   }
+
+  //Serial.flush();
 }
 
 //Calibrate
 //Description : Calibrate for to detect if mask is properly attached
 //              Should be called when attached neatly to face
-void Calibrate(void){
+void Calibrate2Face(void){
 
   for (unsigned char i = 0; i < 16; i++) {
     IQS316.channel_calibration_val[i] = IQS316.sample_differences[i];
   }
-  
+
 }
 
 

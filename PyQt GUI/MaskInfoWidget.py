@@ -22,6 +22,7 @@ class MaskInfoWidget(QWidget):
 		super().__init__()
 
 		self.samples = [0]*16
+		self.SCALE_CONSTANT = 2500;
 		self.initUI()
 		self.initSlotSignals()
 
@@ -59,7 +60,8 @@ class MaskInfoWidget(QWidget):
 
 	
 	def initSlotSignals(self):
-		pass
+		self.scale_btn.clicked.connect(self.scaleToggle)
+
 
 	#A paintEvent starts when the window regain focus
 	def paintEvent(self,event):
@@ -85,7 +87,7 @@ class MaskInfoWidget(QWidget):
 		#randnum = [random.randrange(0,255), random.randrange(0, 255), random.randrange(0, 255)]
 		#randcolor = QColor(255,255,0)
 
-		sample_col = list(map(lambda x: QColor(*self.value2color(x)) , self.samples))
+		sample_col = list(map(lambda x: QColor(*self.value2color(x,self.SCALE_CONSTANT)) , self.samples))
 
 		
 		if len(sample_col) != 16 :
@@ -146,20 +148,28 @@ class MaskInfoWidget(QWidget):
 	#refer to "Color Gradient Guide.png" 
 	#Credit to m00lti from stackoverflow.com
 	@staticmethod
-	def value2color(val):
+	def value2color(val, SCALE_CONSTANT):
 
-		SCALE_CONSTANT = 2500
-
-		scaled = int(val*510/SCALE_CONSTANT)
+		scaled = int(val * 510 / SCALE_CONSTANT)
 		
-		if scaled <= 255 :
+		if (scaled <= 255 and scaled >= 0):
 			r = 255
 			g = scaled
-		else :
+		elif (scaled <= 510 and scaled > 255):
 			r = 510 - scaled
 			g = 255
+		else:
+			r = 255
+			g = 0
 
 		return (r,g,0)
+
+	def scaleToggle(self):
+		if self.SCALE_CONSTANT == 1000:
+			self.SCALE_CONSTANT = 2500
+		else:
+			self.SCALE_CONSTANT = 1000
+
 
 
 if __name__ == '__main__':
