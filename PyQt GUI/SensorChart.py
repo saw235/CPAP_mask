@@ -41,7 +41,7 @@ class SensorChart(QWidget):
 
         self.axis_y = QValueAxis()
         self.chart.setAxisY(self.axis_y, self.series)
-        self.axis_y.setRange(0,3000)
+        self.axis_y.setRange(0,2500)
 
         self.chartView = QChartView(self.chart)
         self.chartView.setRenderHint(QPainter.Antialiasing)
