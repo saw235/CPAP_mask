@@ -3,7 +3,7 @@
 
 from PyQt5.QtChart import QChart, QBarSet, QBarSeries, QBarCategoryAxis, QChartView, QValueAxis
 from PyQt5.QtWidgets import QWidget, QApplication, QGridLayout
-from PyQt5.QtGui import QPixmap, QPainter, QColor
+from PyQt5.QtGui import QPainter
 
 
 class SensorChart(QWidget):
@@ -16,7 +16,7 @@ class SensorChart(QWidget):
 
     def initUI(self):
 
-        self.set0 = QBarSet("Sensors")
+        self.set0 = QBarSet("Sensor")
 
         for sample in self.samples:
             self.set0.append(sample)
@@ -27,6 +27,7 @@ class SensorChart(QWidget):
         self.chart = QChart()
         self.chart.setTitle("Sensor Values")
         self.chart.addSeries(self.series)
+        self.chart.legend().hide()
         self.categories = []
 
         count = 1

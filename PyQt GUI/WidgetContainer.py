@@ -8,6 +8,7 @@ from ConnectWidget import ConnectWidget
 from MaskInfoWidget import MaskInfoWidget
 from SerialReadWorker import SerialReadWorker
 from SerialWriteHandler import SerialWriteHandler
+from PressureGraph import PressureGraph
 
 ### class WidgetContainer: 
 ### Description : Widget to contain every other widget
@@ -21,6 +22,7 @@ class WidgetContainer(QWidget):
         '''Initializes Widget, Signals and Slots'''
         self.cW = ConnectWidget()
         self.miW = MaskInfoWidget()
+        self.pGraph = PressureGraph()
 
         #Connect cross object signals and slots
         self.cW.connected_sig.connect(self.startSerialReadHandler)
@@ -36,6 +38,7 @@ class WidgetContainer(QWidget):
         #Add widget to it
         self.grid.addWidget(self.cW, 0, 0)
         self.grid.addWidget(self.miW, 1, 0)
+        self.grid.addWidget(self.pGraph, 2, 0 )
 
         #Assign layout to self
         self.setLayout(self.grid)
@@ -76,6 +79,9 @@ class WidgetContainer(QWidget):
     def connect_fail_handler(self):
         pass
     ### End of SLOT ###
+
+    def getConnectWidget(self):
+        return self.cW
 
 if __name__ == '__main__':
     import sys
