@@ -3,7 +3,7 @@
 import sys
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtSerialPort import QSerialPortInfo, QSerialPort
-from PyQt5.QtWidgets import (QWidget, QPushButton, QComboBox, QApplication, QGridLayout)
+from PyQt5.QtWidgets import (QWidget, QPushButton, QComboBox, QApplication, QHBoxLayout)
 
 #### ConnectWidget
 #### Description : Widget to connect to com ports #######
@@ -16,10 +16,11 @@ class ConnectWidget(QWidget):
 
         #connect signals to slots
         self.b_refresh.clicked.connect(self.populateComboBox)
-        self.b_conn.clicked.connect(self.connectPort)
-        self.b_disconn.clicked.connect(self.disconnectPort)
+        self.b_conn.clicked.connect(self.connect_btn_handler)
         self.connected_port.error.connect(self.serial_errorHandler)
 
+        self.connected_sig.connect(lambda: self.b_conn.setText("Disconnect"))
+        self.disconnected_sig.connect(lambda: self.b_conn.setText("Connect"))
 
     ## Signals ##
     connected_sig = pyqtSignal()
@@ -29,7 +30,6 @@ class ConnectWidget(QWidget):
     def initUI(self):
         #set up buttons
         self.b_conn = QPushButton("Connect")
-        self.b_disconn = QPushButton("Disconnect")
         self.b_refresh = QPushButton("Refresh")
         
 
@@ -39,17 +39,16 @@ class ConnectWidget(QWidget):
         self.populateComboBox()
 
         #set up a grid layout
-        grid = QGridLayout()
+        hbox = QHBoxLayout()
         
         #grid.setSpacing(10)
 
         #add buttons and combobox
-        grid.addWidget(self.port_cb,0,0, Qt.AlignTop | Qt.AlignLeft)
-        grid.addWidget(self.b_refresh,0,1, Qt.AlignTop | Qt.AlignLeft)
-        grid.addWidget(self.b_conn,0,2, Qt.AlignTop | Qt.AlignRight)
-        grid.addWidget(self.b_disconn,0,3, Qt.AlignTop | Qt.AlignRight)
+        hbox.addWidget(self.port_cb, Qt.AlignLeft)
+        hbox.addWidget(self.b_refresh, Qt.AlignLeft)
+        hbox.addWidget(self.b_conn, Qt.AlignLeft)
 
-        self.setLayout(grid)
+        self.setLayout(hbox)
         #self.show()
 
     ##initializes other variables to be used
@@ -99,6 +98,15 @@ class ConnectWidget(QWidget):
 
 #####SLOTS###############################
     #slot for disconnect button
+
+    def connect_btn_handler(self):
+        if self.connected:
+            self.disconnectPort()
+
+        elif not self.connected:
+            self.connectPort()
+
+
     def disconnectPort(self):
         self.connected_port.close()
         if (self.connected_port.error() == QSerialPort.NoError):

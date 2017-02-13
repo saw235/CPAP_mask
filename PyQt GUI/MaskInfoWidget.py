@@ -60,7 +60,10 @@ class MaskInfoWidget(QWidget):
 
 	
 	def initSlotSignals(self):
-		self.scale_btn.clicked.connect(self.scaleToggle)
+		pass
+
+		#self.scale_btn.clicked.connect(self.scaleToggle)
+
 
 
 	#A paintEvent starts when the window regain focus
@@ -135,6 +138,7 @@ class MaskInfoWidget(QWidget):
 
 	def updateSamples(self, arr):
 		self.samples = arr
+		self.schart.updateSeries(self.samples)
 
 	### Get Methods ###
 	def getChart(self):
@@ -164,11 +168,15 @@ class MaskInfoWidget(QWidget):
 
 		return (r,g,0)
 
-	def scaleToggle(self):
-		if self.SCALE_CONSTANT == 1000:
-			self.SCALE_CONSTANT = 2500
-		else:
-			self.SCALE_CONSTANT = 1000
+	def scaleEnable(self):
+		self.SCALE_CONSTANT = 1000
+		self.schart.enableScale()
+		self.scale_btn.setText("Unscale")
+
+	def scaleDisable(self):
+		self.SCALE_CONSTANT = 2800
+		self.schart.disableScale()
+		self.scale_btn.setText("Scale")
 
 
 

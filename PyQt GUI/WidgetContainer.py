@@ -1,99 +1,78 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
-import sys
 
 from PyQt5.QtWidgets import *
-from PyQt5.QtCore import QThread, pyqtSignal, QMutex
+from PyQt5.QtCore import QThread, pyqtSignal
 
 from ConnectWidget import ConnectWidget
 from MaskInfoWidget import MaskInfoWidget
-from SampleFetcher import SampleFetcher
-
+from SerialReadWorker import SerialReadWorker
+from SerialWriteHandler import SerialWriteHandler
+from PressureGraph import PressureGraph
 
 ### class WidgetContainer: 
 ### Description : Widget to contain every other widget
 class WidgetContainer(QWidget):
     def __init__(self):
         super().__init__()
-
-        self.shared_mutex = QMutex()
-
         self.initWidgetObject()
         self.initLayout()
 
-
-
     def initWidgetObject(self):
-
+        '''Initializes Widget, Signals and Slots'''
         self.cW = ConnectWidget()
         self.miW = MaskInfoWidget()
+        self.pGraph = PressureGraph()
 
         #Connect cross object signals and slots
-        self.cW.connected_sig.connect(self.startFetcherThread)
-        self.cW.disconnected_sig.connect(self.stopFetcherThread)
+        self.cW.connected_sig.connect(self.startSerialReadHandler)
+        self.cW.disconnected_sig.connect(self.stopSerialReadHandler)
         self.cW.connect_fail_sig.connect(self.connect_fail_handler)
 
-        self.miW.scale_btn.clicked.connect(self.startRequestScaleThread)
-
     def initLayout(self):
+        '''Initializes the layout of the widget'''
+
         #Construct a grid layout
         self.grid = QGridLayout()
 
         #Add widget to it
-        self.grid.addWidget(self.cW,0,0)
-        self.grid.addWidget(self.miW,1,0)
+        self.grid.addWidget(self.cW, 0, 0)
+        self.grid.addWidget(self.miW, 1, 0)
+        self.grid.addWidget(self.pGraph, 2, 0 )
 
         #Assign layout to self
         self.setLayout(self.grid)
-        self.resize(1000,500)
+        self.resize(1000, 500)
 
     ### Start of SLOT ###
-    def startFetcherThread(self):
+    def startSerialReadHandler(self):
 
-        #Instantiate a fetcher and a thread
-        self.fetcher = SampleFetcher(self.cW.getConnectedPort())
-        self.thread = QThread()
+        self.read_worker = SerialReadWorker(self.cW.getConnectedPort())
+        self.write_handler = SerialWriteHandler(self.cW.getConnectedPort())
 
-        #Connect signals so that process is called when thread is started
-        self.thread.started.connect(self.fetcher.process)
+        self.miW.scale_btn.clicked.connect(self.write_handler.requestScale)        
+        self.write_handler.moveToThread(self.read_worker)
+        
+        self.read_worker.start()
+        self.read_worker.getReadHandler().dataReady.connect(self.updateWidget)
 
-        self.fetcher.doneSampling.connect(lambda : self.miW.updateSamples(self.fetcher.getSamples()))
-        self.fetcher.doneSampling.connect(self.miW.update)
-        self.fetcher.doneSampling.connect(self.thread.quit)
-        self.fetcher.doneSampling.connect(lambda : self.miW.getChart().updateSeries(self.fetcher.getSamples())) 
-
-        self.thread.finished.connect(self.restartFetcherThread)
-
-        #apply shared mutex
-        self.fetcher.setMutex(self.shared_mutex)
-
-        #Move fetcher to the thread and start the process
-        self.fetcher.moveToThread(self.thread)
-        self.thread.start()
-
-    def restartFetcherThread(self):
-        self.thread.start()
-
-    def stopFetcherThread(self):
-        self.thread.quit()
+    def stopSerialReadHandler(self):
+        self.read_worker.quit()
         sample = [0]*16
         self.miW.updateSamples(sample)
-        self.miW.getChart().updateSeries(sample)
+        self.miW.update()
 
-    def startRequestScaleThread(self):
-         #Instantiate a fetcher and a thread
-        self.req_scale = SampleFetcher(self.cW.getConnectedPort())
-        self.req_scale_thread = QThread()
+    def updateWidget(self):
+        '''Update the contained widget and start their repaint event''' 
+        self.data_read = self.read_worker.getReadHandler().getDataRead();
 
-        #Connect signals so that requestScale is called when thread is started
-        self.req_scale_thread.started.connect(self.fetcher.requestScale)
-        self.fetcher.doneRequestScale.connect(self.req_scale_thread.quit)
+        if self.data_read[0] == b'\x12':
+            self.miW.scaleEnable()
+        elif self.data_read[0] == b'\x13':
+            self.miW.scaleDisable()
 
-
-        self.req_scale.setMutex(self.shared_mutex)
-        self.req_scale.moveToThread(self.req_scale_thread)
-        self.req_scale_thread.start()
-
+        self.miW.updateSamples(self.data_read[1:])
+        self.miW.update()
 
     #Not implemented
     #Description: Handle when connection fail
@@ -101,8 +80,13 @@ class WidgetContainer(QWidget):
         pass
     ### End of SLOT ###
 
+    def getConnectWidget(self):
+        return self.cW
+
 if __name__ == '__main__':
+    import sys
     app = QApplication(sys.argv)
+    app.setStyle("fusion")
     wC = WidgetContainer()
     wC.show()
     app.exec_()
