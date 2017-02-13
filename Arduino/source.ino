@@ -1,7 +1,9 @@
 #include <Wire.h>
 #include <avr/wdt.h> //for watchdog
+#include "MovingAverageFilter.h"
+#include "MemoryFree.h"
 
-#define PUTTY_DISABLE //disable putty handler
+//#define PUTTY_DISABLE //disable putty handler
 
 #define IRDY                2 //i2c ready pin - indicates to master, in this case the arduino, that the iqs is ready for data transmittion. 
 #define I2CA0               4
@@ -84,17 +86,17 @@
 //#define GUI_PRINT            // toggle GUI and DEBUG printing
 
 struct {
-  byte prox_detected;
+  byte prox_detected;   //5 bytes
   byte prox4_11;
   byte prox12_19;
   byte touch4_11;
   byte touch12_19;
   
-  int samples[16]; //for uno is 16-bit (2 bytes)
-  int LTA_samples[16]; 
+  int samples[16]; //for uno is 16-bit (2 bytes)                    //32 bytes  * 8 = 256 bytes
+  int LTA_samples[16];  
 
   int sample_differences[16]; // LTA - current samples
-  
+  int filtered_samples[16]; //Samples fter applying MA_Filter
 
   //for calibration
   int channel_min[16]; //min number for that sensor channel
@@ -109,6 +111,11 @@ struct {
 boolean scale = false;
 boolean LTA = false;
 boolean printRange = false;
+boolean filter_print = false;
+
+#define FILTER_SIZE 13
+int filter_buffer[16][FILTER_SIZE];  // 32 bytes * 10 = 320 bytes 
+
 //////////////////////////////////////
 // Arduino's Routine code /////////// 
 ////////////////////////////////////
@@ -162,7 +169,11 @@ void init_globals()
 
       IQS316.samples[i] = 0;
       IQS316.LTA_samples[i] = 0;
+
+      clearBuf(filter_buffer[i], FILTER_SIZE);
     } //might varies depending on platform.  
+
+
 
 }
 
@@ -170,13 +181,20 @@ void loop(){
 
   IQS316_New_Conversion();
 
+  ApplyMAFilter();
+
   if (IQS316.prox_detected) {
     
       #ifndef PUTTY_DISABLE
       putty_Handler();
+      Serial.print("freeMemory()=");
+      Serial.println(freeMemory());
       #endif
 
+
+      #ifdef PUTTY_DISABLE
       sendSample2GUI();
+      #endif
   }
 
   
@@ -197,7 +215,11 @@ void putty_Handler(void)
           printLTASamples();
         }
         else{
-        printData2();
+          if (filter_print){
+            printFilterSamples();
+          }else{
+            printData2();
+          }
         }
       }
 }
@@ -238,7 +260,7 @@ void printData2(void)
 {
 
       int temp;
-      const int max = 300;
+      const int max = 500;
 
       for (unsigned char i = 0; i < 16; i++ )
       {
@@ -251,6 +273,22 @@ void printData2(void)
       }
 
       Serial.println("Unscaled data. Press 's' to view scaled data. press 't' to view the Long Term Average(LTA).");
+}
+
+void printFilterSamples(void)
+{
+      int temp;
+      const int max = 500;
+
+      for (unsigned char i = 0; i < 16; i++ )
+      {
+          temp = IQS316.filtered_samples[i];
+          int p = (temp*10/max);
+
+          Serial.print("Sensor "); Serial.print(i); Serial.print("\t"); Serial.print(temp); Serial.print("\t : ");
+          for (unsigned char j = 0; j < p; j++) { Serial.print("#");}
+          Serial.println("");
+      }
 }
 
 void printScaled(void)
@@ -360,6 +398,8 @@ void serialEvent(){
       if (!scale) { LTA = !LTA;}
     } else if ( a == '1'){
       if (scale) { printRange = !printRange; }
+    } else if ( a == 'f'){
+      if (!scale) { filter_print = !filter_print;}
     }
     #endif
 
@@ -412,7 +452,11 @@ void Calibrate2Face(void){
 
 }
 
-
+void ApplyMAFilter(void){
+  for (int i = 0; i < 16; i++){
+    IQS316.filtered_samples[i] = MA_Filter_current(filter_buffer[i], IQS316.sample_differences[i], FILTER_SIZE);
+  }
+}
 /***********************************************************************/
 
 
@@ -926,3 +970,5 @@ void resetIQS(){
   digitalWrite(MCLR,1);
   delay(16);
 }
+
+
