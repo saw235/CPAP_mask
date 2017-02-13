@@ -41,7 +41,7 @@ class SensorChart(QWidget):
 
         self.axis_y = QValueAxis()
         self.chart.setAxisY(self.axis_y, self.series)
-        self.axis_y.setRange(0,2500)
+        self.axis_y.setRange(0,3000)
 
         self.chartView = QChartView(self.chart)
         self.chartView.setRenderHint(QPainter.Antialiasing)
@@ -51,6 +51,12 @@ class SensorChart(QWidget):
         self.setLayout(self.grid)
 
         #self.resize(800,500)
+
+    def enableScale(self):
+        self.axis_y.setRange(0,1500)
+
+    def disableScale(self):
+        self.axis_y.setRange(0,3000)
 
     ## SLOTS ##
     def updateSeries(self, samples):

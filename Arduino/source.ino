@@ -123,18 +123,31 @@ void setup(){
   resetIQS(); //reset the IQS316
   
   Serial.begin(115200);// initialize UART
-  Serial.println(F("Done initializing UART..."));
   
+  #ifndef PUTTY_DISABLE
+  Serial.println(F("Done initializing UART..."));
+  #endif
+
+
   Wire.begin();
+
+  #ifndef PUTTY_DISABLE
   Serial.println(F("Done initializing I2C Library..."));
+  #endif
+
   //Wait until product number is read, device is ready if product number is retrieved from register
   
-  
+  #ifndef PUTTY_DISABLE 
   Serial.println(F("Checking for IQS316 connection... "));
+  #endif
+
   while(readRegister(PROD_NUM)!=27)
     delay(20);
+
+  #ifndef PUTTY_DISABLE
   Serial.println(F("IQS316 connection established."));
-  
+  #endif
+
   IQS316_Settings_Init();
 
 }
@@ -162,7 +175,10 @@ void loop(){
       #ifndef PUTTY_DISABLE
       putty_Handler();
       #endif
+
+      sendSample2GUI();
   }
+
   
 }
 
@@ -330,9 +346,7 @@ void serialEvent(){
     a = Serial.read();
 
     //Gui Handler
-    if (a == 0x28) {
-      sendSample2GUI();
-    } else if ( a == 0x27) {
+    if ( a == 0x27) {
       scale = !scale;
     } else if ( a == 0x26){
       Calibrate2Face();
@@ -357,7 +371,15 @@ void serialEvent(){
 //sendSample2GUI
 //Description : Send samples in highbyte and low byte
 void sendSample2GUI(){
- 
+  
+  byte buf[1];
+
+  if (scale){
+    buf[0] = 0x12;
+  } else {buf[0] = 0x13;}
+
+  Serial.write(buf,1);
+
   //make a buffer to store 2 byte for each int
   for (unsigned char i = 0; i < 16; i++){
     int num2convert;
@@ -415,14 +437,21 @@ void pins_init(void)
 //IQS316_Settings_Init()
 //Description : Initializes and configures IQS316
 void IQS316_Settings_Init(void){
+  
+  #ifndef PUTTY_DISABLE
   Serial.println(F("Initializing IQS316..."));
+  #endif
+
   byte start_num, temp;
   
   //read group number
   start_num = readRegister(GROUP_NUM, false);
-  Serial.print(F("Start group number read... -> ")); Serial.println(start_num);
   
+  #ifndef PUTTY_DISABLE
+  Serial.print(F("Start group number read... -> ")); Serial.println(start_num);
   Serial.println(F("Setting CONV_SKIP"));
+  #endif
+
   //set the CONV_SKIP bit
   writeRegister(PROX_SETTINGS_2, 0x09, false);
   
@@ -432,21 +461,27 @@ void IQS316_Settings_Init(void){
   {
       switch(temp)
       {
-          case(0): Clear_LTA(); Serial.println(". Group 0 LTA cleared!"); break;
-          case(1): Clear_LTA(); Serial.println(". Group 1 LTA cleared!"); break;
-          case(2): Clear_LTA(); Serial.println(". Group 2 LTA cleared!"); break;
-          case(3): Clear_LTA(); Serial.println(". Group 3 LTA cleared!"); break;
-          case(4): Clear_LTA(); Serial.println(". Group 4 LTA cleared!"); break;
+          case(0): Clear_LTA(); break;
+          case(1): Clear_LTA(); break;
+          case(2): Clear_LTA(); break;
+          case(3): Clear_LTA(); break;
+          case(4): Clear_LTA(); break;
       }
             
       temp = readRegister(GROUP_NUM, false);
-      Serial.print("Next group number read... -> "); Serial.print(temp);
       
+      #ifndef PUTTY_DISABLE
+      Serial.print("Next group number read... -> "); Serial.print(temp);
+      #endif
+
   } while (temp != start_num); //ensuer all groups have been set.
   
+  #ifndef PUTTY_DISABLE
   Serial.println("");
-  //clear CONV_SKIP bit
   Serial.println(F("Clearing CONV_SKIP"));
+  #endif
+
+  //clear CONV_SKIP bit
   writeRegister(PROX_SETTINGS_2, 0x01);
   
   //Read anything to initiate initial conversion and allow system to settle
@@ -455,8 +490,9 @@ void IQS316_Settings_Init(void){
      temp = readRegister(PROD_NUM); 
   }
   
-  
+  #ifndef PUTTY_DISABLE
   Serial.println(F("Configuring PM_CX_SELECT and UI_SETTINGS0"));
+  #endif
 
   writeRegister(PM_CX_SELECT,0x0F); //Set all channels to have prox mode activated
   writeRegister(UI_SETTINGS0,0xE6); //Configures and Initiate a conversion 1010 0110
@@ -464,7 +500,10 @@ void IQS316_Settings_Init(void){
   //Auto_ATI_routine(800,PROX_MODE_ATI); //Start ATI Routine for prox mode
   Auto_ATI_routine(2048,TOUCH_MODE_ATI); //Start ATI Routine for touch mode
 
+  #ifndef PUTTY_DISABLE
   Serial.println(F("Done Initializing IQS316."));
+  #endif
+
 }
 
 
@@ -484,8 +523,10 @@ void Clear_LTA()
 //             target_mode - PROX_MODE_ATI OR TOUCH_MODE_ATI    (determines which mode to perform ATI on)
 void Auto_ATI_routine(int touch_target, boolean target_mode)
 {
-
+    #ifndef PUTTY_DISABLE
     Serial.println("Starting AUTO ATI Routine...");
+    #endif
+
     int target = touch_target;
     byte hi_byte = (target & 0xFF00) >> 8;
     byte lo_byte = target & 0x00FF;
@@ -508,7 +549,10 @@ void Auto_ATI_routine(int touch_target, boolean target_mode)
     temp = readRegister(PROX_SETTINGS_1, false);
     writeRegister(PROX_SETTINGS_1,  temp | 0x08); 
 
+    #ifndef PUTTY_DISABLE
     Serial.println("Waiting for AUTO ATI Routine to finish...");
+    #endif
+
     do{
       temp = readRegister(UI_FLAGS0); //read UI_FLAGS0
       ati_busy = (temp & 0x04); //get bit 2 information
@@ -517,7 +561,9 @@ void Auto_ATI_routine(int touch_target, boolean target_mode)
 
     } while (ati_busy == 0x04);
 
+    #ifndef PUTTY_DISABLE
     Serial.println("AUTO ATI Routine completed.");
+    #endif
 }
 
 
@@ -854,9 +900,11 @@ byte readRegister(byte registerAddress, boolean send_stop){
 //Retuns : None
 void Comms_Error(int err_code)
 {
-  
+  #ifndef PUTTY_DISABLE
   Serial.print("Error occured during communications. Code - "); Serial.println(err_code,DEC);
   Serial.println("Rebooting...");
+  #endif
+
   reboot();
 }
 
