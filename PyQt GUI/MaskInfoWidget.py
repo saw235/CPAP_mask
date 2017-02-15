@@ -97,43 +97,43 @@ class MaskInfoWidget(QWidget):
 			self.list_access_error.emit()
 			return
 		#Left side Sensor Circles
-		qp.setBrush(sample_col[0])
-		qp.drawEllipse(125,60,30,30) #Sensor x
-		qp.setBrush(sample_col[1])
-		qp.drawEllipse(110,110,30,30) #Sensor x
-		qp.setBrush(sample_col[2])
-		qp.drawEllipse(95,160,30,30) #Sensor x
-		qp.setBrush(sample_col[3])
-		qp.drawEllipse(65,200,30,30) #Sensor x
-		qp.setBrush(sample_col[4])
-		qp.drawEllipse(30,250,30,30) #Sensor x
-		qp.setBrush(sample_col[5])
-		qp.drawEllipse(15,290,30,30) #Sensor x
+		qp.setBrush(sample_col[10])
+		qp.drawEllipse(125,60,30,30) #Sensor 11
+		qp.setBrush(sample_col[11])
+		qp.drawEllipse(110,110,30,30) #Sensor 12
+		qp.setBrush(sample_col[8])
+		qp.drawEllipse(95,160,30,30) #Sensor 9
+		qp.setBrush(sample_col[9])
+		qp.drawEllipse(65,200,30,30) #Sensor 10
+		qp.setBrush(sample_col[6])
+		qp.drawEllipse(30,250,30,30) #Sensor 7
+		qp.setBrush(sample_col[7])
+		qp.drawEllipse(15,290,30,30) #Sensor 8
 
 
 		#Right side Sensor Circles
-		qp.setBrush(sample_col[6])
-		qp.drawEllipse(210,60,30,30) #Sensor x 
-		qp.setBrush(sample_col[7])
-		qp.drawEllipse(225,110,30,30) #Sensor x
-		qp.setBrush(sample_col[8])
-		qp.drawEllipse(240,160,30,30) #Sensor x
-		qp.setBrush(sample_col[9])
-		qp.drawEllipse(270,200,30,30) #Sensor x
-		qp.setBrush(sample_col[10])
-		qp.drawEllipse(300,250,30,30) #Sensor x
-		qp.setBrush(sample_col[11])
-		qp.drawEllipse(315,290,30,30) #Sensor x
+		qp.setBrush(sample_col[1])
+		qp.drawEllipse(210,60,30,30) #Sensor 2 
+		qp.setBrush(sample_col[0])
+		qp.drawEllipse(225,110,30,30) #Sensor 1
+		qp.setBrush(sample_col[3])
+		qp.drawEllipse(240,160,30,30) #Sensor 4
+		qp.setBrush(sample_col[2])
+		qp.drawEllipse(270,200,30,30) #Sensor 3
+		qp.setBrush(sample_col[5])
+		qp.drawEllipse(300,250,30,30) #Sensor 6
+		qp.setBrush(sample_col[4])
+		qp.drawEllipse(315,290,30,30) #Sensor 5
 
 		#Bot side Sensor Circles
-		qp.setBrush(sample_col[12])
-		qp.drawEllipse(30,370,30,30) #Sensor x
 		qp.setBrush(sample_col[13])
-		qp.drawEllipse(120,395,30,30) #Sensor x
-		qp.setBrush(sample_col[14])
-		qp.drawEllipse(220,395,30,30) #Sensor x
+		qp.drawEllipse(30,370,30,30) #Sensor 14
+		qp.setBrush(sample_col[12])
+		qp.drawEllipse(120,395,30,30) #Sensor 13
 		qp.setBrush(sample_col[15])
-		qp.drawEllipse(310,370,30,30) #Sensor x
+		qp.drawEllipse(220,395,30,30) #Sensor 16
+		qp.setBrush(sample_col[14])
+		qp.drawEllipse(310,370,30,30) #Sensor 15
 
 
 	def updateSamples(self, arr):

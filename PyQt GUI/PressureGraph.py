@@ -27,7 +27,7 @@ class PressureGraph(QWidget):
         self.chart.setAxisY(self.axis_y, self.series)
 
         self.axis_x.setRange(0, 150)
-        self.axis_y.setRange(0, 200)
+        self.axis_y.setRange(0.12, 0.25)
 
         self.chart.setTitle("Atmospheric Pressure in CPAP Mask")
 
@@ -37,34 +37,34 @@ class PressureGraph(QWidget):
         self.grid = QGridLayout()
         self.grid.addWidget(self.chartView)
 
-        self.test_btn = QPushButton("TEST")
-        self.grid.addWidget(self.test_btn)
-        self.test_btn.clicked.connect(lambda: self.update(random.randrange(0,180)))
+        #self.test_btn = QPushButton("TEST")
+        #self.grid.addWidget(self.test_btn)
+        #self.test_btn.clicked.connect(lambda: self.update(random.randrange(0,180)))
 
         self.setLayout(self.grid)
 
         self.resize(1000,500)
 
     def update(self, newpoint):
+        '''Update the chart with a new point'''
 
+        #Append the new datum, pop the oldest data 
+        #from the front if exceed length
         self.q.append(newpoint)
         if len(self.q) > len(self.t):
             self.q.popleft()
 
-        p_list = []
+        #Construct a new series
+        #For each t value, append data from the back (newest value)
+        self.series.clear()
+        
         for i in range(0, len(self.t)):
-            
             if i > (len(self.q) - 1):
                 temp = 0
             else:
                 temp = self.q[len(self.t) - 1 - i]
-            p_list.append((self.t[i], temp))
-
-        print(p_list)
-        self.series.clear()         
-        for i in p_list:
-            self.series.append(*i)
-        
+            self.series.append(self.t[i],temp)
+   
         self.chartView.update()
 
 

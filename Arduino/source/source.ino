@@ -3,11 +3,16 @@
 #include "MovingAverageFilter.h"
 #include "MemoryFree.h"
 
-//#define PUTTY_DISABLE //disable putty handler
+#define PUTTY_DISABLE //disable putty handler
 
 #define IRDY                2 //i2c ready pin - indicates to master, in this case the arduino, that the iqs is ready for data transmittion. 
 #define I2CA0               4
 #define MCLR                7
+
+
+// potentiometer wiper (middle terminal) connected to analog pin 0
+#define PRESSURE_AN_PIN A0
+#define V_S 5 //voltage source
 
 //Defines for watchdog timer
 #define WDTO_15MS 0
@@ -92,7 +97,8 @@ struct {
   byte touch4_11;
   byte touch12_19;
   
-  int samples[16]; //for uno is 16-bit (2 bytes)                    //32 bytes  * 8 = 256 bytes
+  //From here
+  int samples[16]; //int for uno is 16-bit (2 bytes) *16 samples => 32 bytes
   int LTA_samples[16];  
 
   int sample_differences[16]; // LTA - current samples
@@ -104,7 +110,8 @@ struct {
   
   int scaled[16];
 
-  int channel_calibration_val[16];
+  int channel_calibration_val[16];   
+  //to here uses 32 * 8 = 256 bytes
 
 } IQS316;
  
@@ -113,8 +120,13 @@ boolean LTA = false;
 boolean printRange = false;
 boolean filter_print = false;
 
-#define FILTER_SIZE 13
+#define FILTER_SIZE 8
 int filter_buffer[16][FILTER_SIZE];  // 32 bytes * 10 = 320 bytes 
+
+#define PRESSURE_FILTER_SIZE 5
+int pressure_filter_buffer[PRESSURE_FILTER_SIZE];  // 32 bytes * 10 = 320 bytes 
+
+float kPA_Pressure = 0; //Pressure in kPA   //float uses 4 bytes in uno
 
 //////////////////////////////////////
 // Arduino's Routine code /////////// 
@@ -171,18 +183,18 @@ void init_globals()
       IQS316.LTA_samples[i] = 0;
 
       clearBuf(filter_buffer[i], FILTER_SIZE);
+
     } //might varies depending on platform.  
 
-
+    clearBuf(pressure_filter_buffer, PRESSURE_FILTER_SIZE);
 
 }
 
 void loop(){
 
   IQS316_New_Conversion();
-
   ApplyMAFilter();
-
+  loadPressure_data();
   if (IQS316.prox_detected) {
     
       #ifndef PUTTY_DISABLE
@@ -196,8 +208,6 @@ void loop(){
       sendSample2GUI();
       #endif
   }
-
-  
 }
 
 
@@ -412,13 +422,20 @@ void serialEvent(){
 //Description : Send samples in highbyte and low byte
 void sendSample2GUI(){
   
+ 
   byte buf[1];
-
+  //send 0x12 at the start of the bytes if scaled
+  //send 0x13 if else
   if (scale){
     buf[0] = 0x12;
-  } else {buf[0] = 0x13;}
+  } else {buf[0] = 0x13;} 
+
 
   Serial.write(buf,1);
+
+  //send IQS316 samples
+  //send 16 samples of int (2 bytes each) => 32 bytes
+
 
   //make a buffer to store 2 byte for each int
   for (unsigned char i = 0; i < 16; i++){
@@ -428,8 +445,6 @@ void sendSample2GUI(){
       num2convert = IQS316.sample_differences[i];
     } else { num2convert = IQS316.scaled[i];}
 
-
-
     byte buf[2];
     //parse into high and low byte
     buf[0] = ((num2convert & 0xFF00) >> 8); //HI_BYTE
@@ -438,7 +453,20 @@ void sendSample2GUI(){
     Serial.write(buf, 2);
   }
 
-  //Serial.flush();
+  //send pressure sensor sample 4 bytes in total
+  byte float_buf[4];
+
+  float2Bytes(kPA_Pressure, float_buf);
+
+  //send from hi byte to lo byte
+  byte invert[4];
+
+  for (unsigned char i = 0; i < 4; i++){
+    invert[i] = float_buf[4 - i - 1];
+  }
+  Serial.write(invert,4);
+
+  //sent 1 + 32 + 4 bytes = 37 bytes in total
 }
 
 //Calibrate
@@ -456,7 +484,47 @@ void ApplyMAFilter(void){
   for (int i = 0; i < 16; i++){
     IQS316.filtered_samples[i] = MA_Filter_current(filter_buffer[i], IQS316.sample_differences[i], FILTER_SIZE);
   }
+
 }
+
+
+/***********************************************************************/
+//////////////////////////////////////////////////////
+//HIGH LEVEL FUNCTIONS for Pressure Sensor Handling //
+/////////////////////////////////////////////////////
+
+//Description: Load Pressure data to the global variable 
+void loadPressure_data(void){
+  int nval_Pressure = 0;
+  nval_Pressure = analogRead(PRESSURE_AN_PIN);
+
+  int filtered_Pressure_nval = MA_Filter_current(pressure_filter_buffer,nval_Pressure,PRESSURE_FILTER_SIZE);
+  kPA_Pressure = convert_digital_to_kPA(filtered_Pressure_nval);
+}
+
+
+//Description: Convert digital value to kiloPascal
+float convert_digital_to_kPA(int nval_Pressure){
+  
+  float volt_Pressure  = V_S * (float)nval_Pressure/1023;  // conversion to voltage reading
+  return volt_Pressure - 1;   // pressure conversion in kPa
+}
+
+//convert float2bytes data
+//credits to Tyler Durden from stackoverflow.com
+//http://stackoverflow.com/questions/24420246/c-function-to-convert-float-to-byte-array
+void float2Bytes(float val,byte* bytes_array){
+  // Create union of shared memory space
+  union {
+    float float_variable;
+    byte temp_array[4];
+  } u;
+  // Overite bytes of union with float variable
+  u.float_variable = val;
+  // Assign bytes to input array
+  memcpy(bytes_array, u.temp_array, 4);
+}
+
 /***********************************************************************/
 
 
@@ -970,5 +1038,3 @@ void resetIQS(){
   digitalWrite(MCLR,1);
   delay(16);
 }
-
-

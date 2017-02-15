@@ -3,6 +3,7 @@ from PyQt5.QtCore import pyqtSignal, QObject
 from PyQt5.QtSerialPort import QSerialPortInfo, QSerialPort
 from PyQt5.QtWidgets import QApplication
 
+EXPECTED_BYTES = 37
 
 class SerialReadHandler(QObject):
     def __init__(self, _qserialport=QSerialPort()):
@@ -14,16 +15,18 @@ class SerialReadHandler(QObject):
     dataReady = pyqtSignal()
 
     def handleReadyRead(self):
-        EXPECTED_BYTES = 33
+
         if (self.port.bytesAvailable() < EXPECTED_BYTES):
             return
         self.data = self.port.readAll()
 
-        self.sample = struct.unpack_from(">c16H", self.data, 0)
+        self.sample = struct.unpack_from(">c16Hf", self.data, 0)
 
         if (not((self.sample[0] == b'\x12') or (self.sample[0] == b'\x13'))):
             return
 
+        #Uncomment when debugging
+        #print(self.sample)
         self.dataReady.emit()
 
     def setSerialPort(self, _qserialport):
@@ -56,5 +59,6 @@ if __name__ == '__main__':
     time.sleep(4)
     if connect:
         rHandler = SerialReadHandler(qsPort)
+        rHandler.port.readyRead.connect(rHandler.handleReadyRead)
         
     app.exec_()

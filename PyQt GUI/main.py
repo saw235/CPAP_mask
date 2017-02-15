@@ -51,5 +51,6 @@ class MainWindow(QMainWindow):
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
+    app.setStyle("fusion")
     gui = MainWindow()
     app.exec_()

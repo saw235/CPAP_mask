@@ -71,8 +71,9 @@ class WidgetContainer(QWidget):
         elif self.data_read[0] == b'\x13':
             self.miW.scaleDisable()
 
-        self.miW.updateSamples(self.data_read[1:])
+        self.miW.updateSamples(self.data_read[1:-1])
         self.miW.update()
+        self.pGraph.update(self.data_read[-1])
 
     #Not implemented
     #Description: Handle when connection fail
