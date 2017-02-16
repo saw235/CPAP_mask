@@ -22,7 +22,9 @@ class PressureGraph(QWidget):
         self.chart.addSeries(self.series)
 
         self.axis_x = QValueAxis()
+        self.axis_x.setTitleText("Ticks elapsed")
         self.axis_y = QValueAxis()
+        self.axis_y.setTitleText("Pressure (kPa)")
         self.chart.setAxisX(self.axis_x, self.series)
         self.chart.setAxisY(self.axis_y, self.series)
 

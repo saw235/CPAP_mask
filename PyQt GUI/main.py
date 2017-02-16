@@ -21,8 +21,8 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(self.container)
 
 
-        self.setGeometry(400, 200, 1000, 200)
-        self.setWindowTitle("TESTGUI")
+        self.setGeometry(400, 200, 1000, 800)
+        self.setWindowTitle("Capacitive CPAP Mask")
         self.show()
 
 

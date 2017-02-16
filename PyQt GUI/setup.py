@@ -10,8 +10,8 @@ base = None
 if sys.platform == "win32":
     base = "Win32GUI"
 
-setup(  name = "GUI",
+setup(  name = "CMASK",
         version = "0.1",
-        description = "My GUI application!",
+        description = "Interactive Tool for Capacitive CPAP Mask",
         options = {"build_exe": build_exe_options},
-        executables = [Executable("WidgetContainer.py", base=base)])
+        executables = [Executable("main.py", base=base, icon="Img/shy.ico")])	
