@@ -110,11 +110,23 @@ struct {
   
   int scaled[16];
 
-  int channel_calibration_val[16];   
+  int channel_calibration_val[5];   
   //to here uses 32 * 8 = 256 bytes
+
+  boolean attached[5];
+  boolean proper_attach;
 
 } IQS316;
  
+#define DATA_FLAGS 0x01 //Sent serially as start byte indication
+#define SCALE_MASK 0x02 //OR with DATA_FLAGS to indicate scaled_data to GUI
+#define PROPERATTACH_MASK 0x04 //Bit Flag for IQS316.proper_attached
+#define ATTACH_0_MASK 0x08 //Bits flags for when IQS316.attached[i] is TRUE
+#define ATTACH_1_MASK 0x10 
+#define ATTACH_2_MASK 0x20
+#define ATTACH_3_MASK 0x40
+#define ATTACH_4_MASK 0x80
+
 boolean scale = false;
 boolean LTA = false;
 boolean printRange = false;
@@ -192,11 +204,14 @@ void init_globals()
 
 void loop(){
 
-  IQS316_New_Conversion();
-  ApplyMAFilter();
-  loadPressure_data();
+  IQS316_New_Conversion(); //Polls data from IQS316
+  loadPressure_data(); // Polls data from Pressure Sensor
+
   if (IQS316.prox_detected) {
-    
+      
+      ApplyMAFilter(); //Apply Moving average filters to IQS316 data
+      checkTreshHold();
+
       #ifndef PUTTY_DISABLE
       putty_Handler();
       Serial.print("freeMemory()=");
@@ -424,18 +439,41 @@ void sendSample2GUI(){
   
  
   byte buf[1];
-  //send 0x12 at the start of the bytes if scaled
-  //send 0x13 if else
+  buf[0] = DATA_FLAGS;
+  
   if (scale){
-    buf[0] = 0x12;
-  } else {buf[0] = 0x13;} 
+    buf[0] = buf[0] | SCALE_MASK; //Apply mask
+  } 
 
+  if (IQS316.proper_attach) {
+    buf[0] = buf[0] | PROPERATTACH_MASK;
+  }
 
-  Serial.write(buf,1);
+  if (IQS316.attached[0]){
+    buf[0] = buf[0] | ATTACH_0_MASK;
+  }
+
+  if (IQS316.attached[1]){
+    buf[0] = buf[0] | ATTACH_1_MASK;
+  }
+
+  if (IQS316.attached[2]){
+    buf[0] = buf[0] | ATTACH_2_MASK;
+  }
+
+  if (IQS316.attached[3]){
+    buf[0] = buf[0] | ATTACH_3_MASK;
+  }
+
+  if (IQS316.attached[4]){
+    buf[0] = buf[0] | ATTACH_4_MASK;
+  }
+
+  Serial.write(buf,1); 
+
 
   //send IQS316 samples
   //send 16 samples of int (2 bytes each) => 32 bytes
-
 
   //make a buffer to store 2 byte for each int
   for (unsigned char i = 0; i < 16; i++){
@@ -469,17 +507,104 @@ void sendSample2GUI(){
   //sent 1 + 32 + 4 bytes = 37 bytes in total
 }
 
+/***********************************************************************/
+///////////////////////////////////////////////////////////////
+//HIGH LEVEL FUNCTIONS for Capacitive Sensor Data Processing //
+//////////////////////////////////////////////////////////////
+
+
 //Calibrate
-//Description : Calibrate for to detect if mask is properly attached
-//              Should be called when attached neatly to face
+//Description : Calibrate for proper mask attachment
+//              Uses
+//              
 void Calibrate2Face(void){
 
-  for (unsigned char i = 0; i < 16; i++) {
-    IQS316.channel_calibration_val[i] = IQS316.sample_differences[i];
-  }
+    memset(IQS316.channel_calibration_val, 0, sizeof(int) * 5); //clears the array
+
+  //Calculate the average for Group 0 (Top Upper Right) sensor : [0] [1] [3]
+  IQS316.channel_calibration_val[0] += IQS316.filtered_samples[0];
+  IQS316.channel_calibration_val[0] += IQS316.filtered_samples[1];
+  IQS316.channel_calibration_val[0] += IQS316.filtered_samples[3];
+  IQS316.channel_calibration_val[0] = IQS316.channel_calibration_val[0] / 3;
+  IQS316.channel_calibration_val[0] = IQS316.channel_calibration_val[0]*4 / 5; //takes the 80% as the threshold
+
+  //Calculate the average for Group 1 (Top Lower Right) sensor : [2] [5] [4]
+  IQS316.channel_calibration_val[1] += IQS316.filtered_samples[2];
+  IQS316.channel_calibration_val[1] += IQS316.filtered_samples[4];
+  IQS316.channel_calibration_val[1] += IQS316.filtered_samples[5];
+  IQS316.channel_calibration_val[1] = IQS316.channel_calibration_val[1] / 3;
+  IQS316.channel_calibration_val[1] = IQS316.channel_calibration_val[1]*4 / 5;
+
+  //Calculate the average for Group 2 (Top Upper Left) sensor : [8] [10] [11]
+  IQS316.channel_calibration_val[2] += IQS316.filtered_samples[8];
+  IQS316.channel_calibration_val[2] += IQS316.filtered_samples[10];
+  IQS316.channel_calibration_val[2] += IQS316.filtered_samples[11];
+  IQS316.channel_calibration_val[2] = IQS316.channel_calibration_val[2] / 3;
+  IQS316.channel_calibration_val[2] = IQS316.channel_calibration_val[2]*4 / 5;
+
+  //Calculate the average for Group 3 (Top Lower Left) sensor : [6] [7] [9]
+  IQS316.channel_calibration_val[3] += IQS316.filtered_samples[6];
+  IQS316.channel_calibration_val[3] += IQS316.filtered_samples[7];
+  IQS316.channel_calibration_val[3] += IQS316.filtered_samples[9];
+  IQS316.channel_calibration_val[3] = IQS316.channel_calibration_val[2] / 3;
+  IQS316.channel_calibration_val[3] = IQS316.channel_calibration_val[3]*4 / 5;
+
+  //Calculate the average for Group 4 (Bottom) sensor : [12] [13] [14] [15]
+  IQS316.channel_calibration_val[4] += IQS316.filtered_samples[12];
+  IQS316.channel_calibration_val[4] += IQS316.filtered_samples[13];
+  IQS316.channel_calibration_val[4] += IQS316.filtered_samples[14];
+  IQS316.channel_calibration_val[4] += IQS316.filtered_samples[15];
+  IQS316.channel_calibration_val[4] = IQS316.channel_calibration_val[4] / 4;
+  IQS316.channel_calibration_val[4] = IQS316.channel_calibration_val[4]*4 / 5;
 
 }
 
+//Split sensors into various group and find their average
+void checkTreshHold(void){
+
+  int average[5] = {0,0,0,0,0};
+
+  //Calculate the average for Group 0 (Top Upper Right) sensor : [0] [1] [3]
+  average[0] += IQS316.filtered_samples[0];
+  average[0] += IQS316.filtered_samples[1];
+  average[0] += IQS316.filtered_samples[3];
+  average[0] = average[0] / 3;
+
+  //Calculate the average for Group 1 (Top Lower Right) sensor : [2] [5] [4]
+  average[1] += IQS316.filtered_samples[2];
+  average[1] += IQS316.filtered_samples[4];
+  average[1] += IQS316.filtered_samples[5];
+  average[1] = average[1] / 3;
+
+  //Calculate the average for Group 2 (Top Upper Left) sensor : [8] [10] [11]
+  average[2] += IQS316.filtered_samples[8];
+  average[2] += IQS316.filtered_samples[10];
+  average[2] += IQS316.filtered_samples[11];
+  average[2] = average[2] / 3;
+
+  //Calculate the average for Group 3 (Top Lower Left) sensor : [6] [7] [9]
+  average[3] += IQS316.filtered_samples[6];
+  average[3] += IQS316.filtered_samples[7];
+  average[3] += IQS316.filtered_samples[9];
+  average[3] = average[2] / 3;
+
+  //Calculate the average for Group 4 (Bottom) sensor : [12] [13] [14] [15]
+  average[4] += IQS316.filtered_samples[12];
+  average[4] += IQS316.filtered_samples[13];
+  average[4] += IQS316.filtered_samples[14];
+  average[4] += IQS316.filtered_samples[15];
+  average[4] = average[4] / 4;
+
+  for (unsigned char i = 0; i < 5; i++){
+    IQS316.attached[i] = average[i] >= IQS316.channel_calibration_val[i];
+  }
+
+  IQS316.proper_attach = IQS316.attached[0] && IQS316.attached[1] && IQS316.attached[2] &&
+               IQS316.attached[3] && IQS316.attached[4];  
+}
+
+
+//Applies Moving Average Filter to each of the sensor channels
 void ApplyMAFilter(void){
   for (int i = 0; i < 16; i++){
     IQS316.filtered_samples[i] = MA_Filter_current(filter_buffer[i], IQS316.sample_differences[i], FILTER_SIZE);

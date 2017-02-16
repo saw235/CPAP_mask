@@ -32,7 +32,7 @@ class MaskInfoWidget(QWidget):
 		self.maskimg = QPixmap('Img\mask_layover.jpg')
 		self.masklbl = QLabel()
 		self.masklbl.setPixmap(self.maskimg)
-
+		self.maskstatlbl = QLabel("")
 		self.schart = sC.SensorChart(self.samples)
 
 		self.scale_btn = QPushButton("Scale")
@@ -42,13 +42,23 @@ class MaskInfoWidget(QWidget):
 		btn_hbox.addWidget(self.scale_btn)
 		btn_hbox.addWidget(self.calibrate_btn)
 
+
 		vbox = QVBoxLayout()
 		vbox.addWidget(self.schart)
 		vbox.addLayout(btn_hbox)
 
+		status_hbox = QHBoxLayout()
+		status_hbox.addWidget(self.maskstatlbl)
+		status_hbox.insertSpacing(0,150)
+
+		vbox2 = QVBoxLayout()
+		vbox2.addWidget(self.masklbl)
+		vbox2.addLayout(status_hbox)
+
 		hbox = QHBoxLayout()
 		hbox.addLayout(vbox)
-		hbox.addWidget(self.masklbl)
+		hbox.addLayout(vbox2)
+
 		
 		#hbox.insertWidget(0, masklbl)
 		self.setLayout(hbox)

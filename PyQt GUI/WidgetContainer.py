@@ -50,7 +50,8 @@ class WidgetContainer(QWidget):
         self.read_worker = SerialReadWorker(self.cW.getConnectedPort())
         self.write_handler = SerialWriteHandler(self.cW.getConnectedPort())
 
-        self.miW.scale_btn.clicked.connect(self.write_handler.requestScale)        
+        self.miW.scale_btn.clicked.connect(self.write_handler.requestScale)
+        self.miW.calibrate_btn.clicked.connect(self.write_handler.requestCalibration)          
         self.write_handler.moveToThread(self.read_worker)
         
         self.read_worker.start()
@@ -65,11 +66,17 @@ class WidgetContainer(QWidget):
     def updateWidget(self):
         '''Update the contained widget and start their repaint event''' 
         self.data_read = self.read_worker.getReadHandler().getDataRead();
+        self.startbyte = self.data_read[0]
 
-        if self.data_read[0] == b'\x12':
+        if (bytes([self.startbyte[0] & b'\x02'[0]]) == b'\x02'):
             self.miW.scaleEnable()
-        elif self.data_read[0] == b'\x13':
+        else:
             self.miW.scaleDisable()
+
+        if (bytes([self.startbyte[0] & b'\x04'[0]]) == b'\x04'):
+            self.miW.maskstatlbl.setText("Mask Attached Properly")
+        else:
+            self.miW.maskstatlbl.setText("Mask Not Attached Properly")
 
         self.miW.updateSamples(self.data_read[1:-1])
         self.miW.update()

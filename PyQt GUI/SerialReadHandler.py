@@ -21,8 +21,9 @@ class SerialReadHandler(QObject):
         self.data = self.port.readAll()
 
         self.sample = struct.unpack_from(">c16Hf", self.data, 0)
-
-        if (not((self.sample[0] == b'\x12') or (self.sample[0] == b'\x13'))):
+        self.startbyte = bytes([self.sample[0][0] & b'\x03'[0]])
+        
+        if (not((self.startbyte == b'\x01') or (self.startbyte == b'\x03'))):
             return
 
         #Uncomment when debugging
@@ -44,7 +45,7 @@ if __name__ == '__main__':
     import time
     app = QApplication(sys.argv)
     qsPort = QSerialPort()
-    qsPort.setPortName('COM5')
+    qsPort.setPortName('COM4')
     qsPort.setBaudRate(QSerialPort.Baud115200)
 
     connect = False
