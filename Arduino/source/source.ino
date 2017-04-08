@@ -674,7 +674,7 @@ void Auto_ATI_routine(int touch_target, boolean target_mode)
     int target = touch_target;
     byte hi_byte = (target & 0xFF00) >> 8;
     byte lo_byte = target & 0x00FF;
-    boolean ati_busy;
+    byte ati_busy;
 
     //set auto ATI Target to 400
     writeRegister(AUTO_ATI_TARGET_HI, hi_byte, false);
