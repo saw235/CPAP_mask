@@ -9,6 +9,7 @@ from MaskInfoWidget import MaskInfoWidget
 from SerialReadWorker import SerialReadWorker
 from SerialWriteHandler import SerialWriteHandler
 from PressureGraph import PressureGraph
+import winsound
 
 ### class WidgetContainer: 
 ### Description : Widget to contain every other widget
@@ -17,6 +18,8 @@ class WidgetContainer(QWidget):
         super().__init__()
         self.initWidgetObject()
         self.initLayout()
+
+        self.beeped = False
 
     def initWidgetObject(self):
         '''Initializes Widget, Signals and Slots'''
@@ -75,15 +78,28 @@ class WidgetContainer(QWidget):
 
         if (bytes([self.startbyte[0] & b'\x04'[0]]) == b'\x04'):
             self.miW.maskstatlbl.setText("Mask Attached Properly")
+            self.beeped = False
         else:
             self.miW.maskstatlbl.setText("Mask Not Attached Properly")
+            
+            #beeps if not already beeped
+            if not self.beeped:
+                winsound.PlaySound("Sounds\Beep1.wav", winsound.SND_ASYNC)
+                self.beeped = True
+
+
+
+        self.area_status_bits = list(format(self.startbyte[0], '08b'))[0:5]
+        self.area_status_bits = self.area_status_bits[::-1] #invert the bits as it goes from 4 to 0
+        self.area_status = list(map(lambda x : True if x == '1' else False, self.area_status_bits))
 
         self.miW.updateSamples(self.data_read[1:-1])
+        self.miW.updateAreaStat(self.area_status)
         self.miW.update()
         self.pGraph.update(self.data_read[-1])
 
     #Not implemented
-    #Description: Handle when connection fail
+    #Description: Handle when connection fails
     def connect_fail_handler(self):
         pass
     ### End of SLOT ###

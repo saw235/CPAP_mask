@@ -1,6 +1,6 @@
 
-#ifndef MAFILTER_H
-#define MAFILTER_H
+#ifndef MAFILTER_H_UNO
+#define MAFILTER_H_UNO
 
 #include <string.h>
 

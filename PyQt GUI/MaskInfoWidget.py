@@ -22,6 +22,7 @@ class MaskInfoWidget(QWidget):
 		super().__init__()
 
 		self.samples = [0]*16
+		self.area_stat = [False]*5;
 		self.SCALE_CONSTANT = 2500;
 		self.initUI()
 		self.initSlotSignals()
@@ -84,18 +85,43 @@ class MaskInfoWidget(QWidget):
 
 		#start painting
 		self.drawSensorCircles(qp)
+		self.drawAreaColor(qp)
 		self.masklbl.setPixmap(self.maskimg)
+
+
+	#drawAreaColor()
+	#Parameters: qp - QPainter
+	def drawAreaColor(self,qp):
+		self.area_stat_col = list(map(lambda x: QColor(*self.areastat2color(x)),self.area_stat))
+
+		qp.setBrush(self.area_stat_col[0])
+		qp.drawRect(10,20,10,10)
+		qp.drawText(25,30,"Upper Right Area")
+
+		qp.setBrush(self.area_stat_col[1])
+		qp.drawRect(10,35,10,10)
+		qp.drawText(25,45,"Lower Right Area")
+
+		qp.setBrush(self.area_stat_col[2])
+		qp.drawRect(10,50,10,10)
+		qp.drawText(25,60,"Upper Left Area")
+
+		qp.setBrush(self.area_stat_col[3])
+		qp.drawRect(10,65,10,10)
+		qp.drawText(25,75,"Lower Left Area")
+
+		qp.setBrush(self.area_stat_col[4])
+		qp.drawRect(10,80,10,10)
+		qp.drawText(25,90,"Bottom Area")
 
 
 	#drawSensorCircles()
 	#Parameters: qp - QPainter
-	#            data - array of 16 data
-
 	def drawSensorCircles(self,qp):
 		
-		color = QColor(0,0,0)
-		color.setNamedColor('#d4d4d4')
-		qp.setPen(color)
+		#color = QColor(0,0,0)
+		#color.setNamedColor('#d4d4d4')
+		#qp.setPen(color)
 
 		#randnum = [random.randrange(0,255), random.randrange(0, 255), random.randrange(0, 255)]
 		#randcolor = QColor(255,255,0)
@@ -150,6 +176,9 @@ class MaskInfoWidget(QWidget):
 		self.samples = arr
 		self.schart.updateSeries(self.samples)
 
+	def updateAreaStat(self, arr):
+		self.area_stat = arr
+
 	### Get Methods ###
 	def getChart(self):
 		return self.schart
@@ -177,6 +206,15 @@ class MaskInfoWidget(QWidget):
 			g = 0
 
 		return (r,g,0)
+
+	@staticmethod
+	def areastat2color(val):
+		if val:
+			#return Green if true
+			return (0,255,0)
+		else:
+			return (255,0,0)
+
 
 	def scaleEnable(self):
 		self.SCALE_CONSTANT = 1000

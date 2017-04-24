@@ -4,7 +4,7 @@
 #include "MemoryFree.h"
 #include "IQS316.h"
 
-//#define PUTTY_DISABLE //disable putty handler
+#define PUTTY_DISABLE //disable putty handler
 
 #define IRDY                2 //i2c ready pin - indicates to master, in this case the arduino, that the iqs is ready for data transmittion. 
 #define I2CA0               4
@@ -147,7 +147,7 @@ void putty_Handler(void)
           printLTASamples();
         }
         else{
-          if (  ){
+          if (filter_print){
             printFilterSamples();
           }else{
             printData2();
@@ -983,7 +983,7 @@ void scale_to_same()
 //writeRegister()
 //Description : Writes a byte of data to the register address using I2C
 void writeRegister(byte registerAddress, byte data, boolean send_stop){
-  while(digitalRead(IRDY)==1){};// wait for IQS to be ready
+  while(digitalRead(IRDY)==0){};// wait for IQS to be ready
   
   Wire.beginTransmission(IQS316_ADDRESS); // fixed device address : 111 0100  ) 
   Wire.write(registerAddress);  
@@ -1017,7 +1017,7 @@ byte readRegister(byte registerAddress)
 //Retuns : Byte received 
 byte readRegister(byte registerAddress, boolean send_stop){
   byte c;
-  while(digitalRead(IRDY)==1){};// wait for IQS to be ready
+  while(digitalRead(IRDY)==0){};// wait for IQS to be ready
   
   Wire.beginTransmission(IQS316_ADDRESS);   
   Wire.write(registerAddress);    // request device info
