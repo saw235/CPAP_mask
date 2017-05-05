@@ -96,7 +96,7 @@ class WidgetContainer(QWidget):
         self.miW.updateSamples(self.data_read[1:-1])
         self.miW.updateAreaStat(self.area_status)
         self.miW.update()
-        self.pGraph.update(self.data_read[-1])
+        self.pGraph.update(self.data_read[-1]) #Data is in kPa
 
     #Not implemented
     #Description: Handle when connection fails
